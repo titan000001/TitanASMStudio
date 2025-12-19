@@ -19,6 +19,7 @@ std::string cleanToken(std::string t) {
 }
 
 int parseNumber(std::string numStr) {
+    if (numStr.empty()) return 0;
     try {
         if (numStr.back() == 'h' || numStr.back() == 'H') {
             numStr.pop_back();
