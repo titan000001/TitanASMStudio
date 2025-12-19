@@ -60,12 +60,16 @@ bool Assembler::pass1(const std::string& inputFile) {
         std::stringstream ss(line);
         std::string token; ss >> token;
         
+        if (token.empty()) continue; // Safety check forced
+
         // Label Definition
         if (token.back() == ':') {
             std::string label = token.substr(0, token.length() - 1);
             symbolTable[label] = locationCounter;
             ss >> token; // Move next
         }
+        
+        if (token.empty()) continue; // Check again after consume
 
         // Variable Definition (VAR DB VAL)
         // If first token (after label check) is a name, and second is DB
