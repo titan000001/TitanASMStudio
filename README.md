@@ -1,4 +1,4 @@
-# 🚀 TitanASM: The Ultimate 8086 Development Environment
+# 🚀 TitanASM: 8086 Development Environment
 
 ![Build Status](https://img.shields.io/badge/Build-Success-brightgreen)
 ![Tech Stack](https://img.shields.io/badge/Language-C%2B%2B%20%7C%20C%23-blue)
@@ -13,7 +13,7 @@
     |_|   |_| \__| \__,_||_| /_/   \_\ |____/ |_|  |_|
 ```
 
-TitanASM is a high-performance, hybrid development environment designed specifically for **Compiler Design** and **Computer Architecture** students. It combines the raw power of a C++ backend with the intuitive interface of a C# Studio.
+TitanASM is a high-performance development environment designed for **Compiler Design** and **Computer Architecture** education. It features a high-speed C++ backend for assembly and simulation, integrated with a clean C# Studio for a seamless development experience.
 
 ---
 
@@ -21,23 +21,23 @@ TitanASM is a high-performance, hybrid development environment designed specific
 
 | Feature | Description |
 | :--- | :--- |
-| **Hybrid Core** | Blazing fast C++ Assembler & Virtual Machine wrapped in a modern C# GUI. |
-| **Full Debugger** | Step-by-step execution with a **Live Register & Stack Viewer**. |
-| **Macro Processor** | Support for `PROCLIB`, `INCLUDE`, and complex macro expansions. |
-| **emu8086 Ready** | Native support for `print`, `printn`, and standard BIOS interrupts. |
-| **Universal HEX** | Synchronized 2-digit HEX protocol for perfect Machine Code accuracy. |
+| **Hybrid Core** | C++ Assembler & Virtual Machine with a C# Windows GUI. |
+| **Interactive Debugger** | Step-by-step execution with a **Live Register & Stack Viewer**. |
+| **Macro Processor** | Support for `INCLUDE` and macro expansions. |
+| **emu8086 Ready** | Support for `print`, `printn`, and standard BIOS interrupts. |
+| **Machine Code Synced** | Exact 2-digit HEX output for absolute instruction accuracy. |
 
 ---
 
 ## 📸 Screenshots
 
-### 🖥️ The Studio
-![Studio Interface](docs/screenshots/main_ui.png)
-*Write, Assemble, and Debug all in one place.*
-
 ### 🌍 Hello World
 ![Hello World](docs/screenshots/hello_world.png)
-*Native string handling for quick prototyping.*
+*Simple, efficient assembly.*
+
+### 🖥️ Mathematics & I/O
+![Addition](docs/screenshots/addition.png)
+*Interactive simulation with real-time console input.*
 
 ---
 
@@ -57,8 +57,8 @@ TitanASM supports a comprehensive subset of the 8086 instruction set:
 
 ### Prerequisites
 - **Windows OS**
-- **MinGW (g++)** for backend compilation.
-- **.NET Framework** for the Studio interface.
+- **MinGW (g++)**
+- **.NET Framework**
 
 ### Installation & Run
 1. Clone the repository.
@@ -71,18 +71,18 @@ TitanASM supports a comprehensive subset of the 8086 instruction set:
 ## 🏗️ Build from Source
 
 ### Backend (Assembler & VM)
-```powershell
+```bash
 g++ src/backend/*.cpp -I src/backend -o bin/TitanASM.exe
 ```
 
-### Frontend (Visual Studio UI)
-```powershell
+### Frontend (User Interface)
+```bash
 csc /target:winexe /out:bin/TitanASMStudio.exe src/frontend/AssemblerGUI.cs
 ```
 
 ---
 
-## 📜 Example: Interactive Calculator
+## 📜 Example: Basic Arithmetic
 ```asm
 org 100h
 .code
@@ -114,6 +114,4 @@ end main
 ---
 
 ## ⚖️ License
-This project is open-source and intended for educational purposes. 
-
-**Developed with ❤️ for Advanced Agentic Coding.**
+This project is open-source and intended for educational use. 
