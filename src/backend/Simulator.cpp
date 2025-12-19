@@ -51,7 +51,7 @@ bool Simulator::load(const std::string& objectFile) {
         if (addrToken.empty()) continue;
         
         try {
-            address = std::stoi(addrToken);
+            address = std::stoi(addrToken, nullptr, 16);
             int byteVal;
             while (ss >> std::hex >> byteVal) {
                 if (address < memory.size()) {
