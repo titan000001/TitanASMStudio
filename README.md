@@ -12,9 +12,13 @@ TitanASM is a robust learning tool designed for **Compiler Design** courses. It 
 **Key Features:**
 *   **Hybrid Architecture**: High-performance C++ Core (Assembler+VM) with a modern C# Windows Interface.
 *   **Interactive Debugger**: Step-by-step execution with live Register Views (`AX`, `BX`, `SP`, `IP`).
-*   **Stack Support**: Fully implemented System Stack (`PUSH`, `POP`, `CALL`, `RET`).
+*   **Advanced Instruction Set**: 
+    *   **Stack**: `PUSH`, `POP`, `CALL`, `RET`.
+    *   **Arithmetic**: `ADD`, `SUB`.
+    *   **Variables**: `.data`, `DB`, `DW` with memory access (`MOV Reg, [Var]`).
+    *   **I/O**: Keyboard Input (`AH=1`) and Display Output (`AH=2`).
 *   **Syntax Highlighting**: Color-coded editor for easy reading.
-*   **emu8086 Compatible**: Supports `printn`, `mov ah, 4ch`, and standard interrupts.
+*   **emu8086 Compatible**: Supports `printn`, `.model`, `.stack`, and standard interrupts.
 
 ## Getting Started
 
@@ -23,12 +27,34 @@ TitanASM is a robust learning tool designed for **Compiler Design** courses. It 
 *   .NET Framework 4.5+
 
 ### Running the Studio
-1.  Navigate to the **`bin/`** folder.
-2.  Launch **`TitanASMStudio.exe`**.
-3.  Write your code or load an example from the `examples/` folder.
-4.  Click **Assemble** -> **Run** (or **Debug** for step-by-step mode).
+1.  **Open the Project Folder**: Navigate to the **`bin/`** directory.
+2.  **Launch the App**: Double-click **`TitanASMStudio.exe`**.
+    *   *Note: Ensure `TitanASM.exe` is in the same folder.*
+3.  **Start Coding**: Write your code or load an example from the `examples/` folder.
+4.  **Execute**:
+    *   Click **Assemble** to compile.
+    *   Click **Run** for standard execution.
+    *   Click **Debug** for interactive step-by-step mode (Great for visualizing logic!).
 
 ## Example Code
+
+### Variables & I/O
+```asm
+.model small
+.data
+    val1 db 10
+.code
+main proc
+    mov al, val1    ; Load Variable
+    add al, 5       ; Arithmetic
+    
+    mov ah, 1       ; Input Char
+    int 21h
+    
+    mov ah, 4ch     ; Exit
+    int 21h
+main endp
+```
 
 ### Hello World
 ```asm
@@ -63,7 +89,7 @@ my_func:
 ## Build from Source
 **Backend**:
 ```bash
-g++ src/backend/*.cpp -o bin/TitanASM.exe
+g++ src/backend/*.cpp -I src/backend -o bin/TitanASM.exe
 ```
 **Frontend**:
 ```bash
