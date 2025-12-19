@@ -11,15 +11,16 @@ int main(int argc, char* argv[]) {
     }
 
     // Check for Simulator Mode
-    if (strcmp(argv[1], "-run") == 0) {
+    if (strcmp(argv[1], "-run") == 0 || strcmp(argv[1], "-debug") == 0) {
         if (argc < 3) {
             std::cout << "Error: Please specify object file to run." << std::endl;
             return 1;
         }
         std::string objFile = argv[2];
         Simulator cpu;
+        bool debugMode = (strcmp(argv[1], "-debug") == 0); // Determine if debug mode
         if (cpu.load(objFile)) {
-            cpu.run();
+            cpu.run(debugMode); // Pass debugMode to run
         } else {
             std::cout << "Simulation failed to load." << std::endl;
         }

@@ -17,16 +17,18 @@ uint16_t* Simulator::getRegisterPtr16(const std::string& regName) {
     return nullptr;
 }
 
-uint8_t* Simulator::getRegisterPtr8(const std::string& regName) {
-    if (regName == "AL") return &AX.L;
-    if (regName == "AH") return &AX.H;
-    if (regName == "BL") return &BX.L;
-    if (regName == "BH") return &BX.H;
-    if (regName == "CL") return &CX.L;
-    if (regName == "CH") return &CX.H;
-    if (regName == "DL") return &DX.L;
-    if (regName == "DH") return &DX.H;
-    return nullptr;
+// Stack Helpers (Little Endian in Memory)
+void Simulator::push(uint16_t val) {
+    SP -= 2;
+    memory[SP] = val & 0xFF;        // Low Byte
+    memory[SP+1] = (val >> 8) & 0xFF; // High Byte
+}
+
+uint16_t Simulator::pop() {
+    uint8_t low = memory[SP];
+    uint8_t high = memory[SP+1];
+    SP += 2;
+    return (high << 8) | low;
 }
 
 bool Simulator::load(const std::string& objectFile) {
@@ -44,28 +46,12 @@ bool Simulator::load(const std::string& objectFile) {
         std::stringstream ss(line);
         std::string type, valStr;
         int address;
-        
-        // Format: ADDR  TYPE  VALUE
-        // Types:
-        // CODE <OP> <ARGS...>
-        // DATA <VAL>
-        // We need a consistent format from the new Assembler.
-        // Let's assume the Assembler will produce:
-        // ADDRESS  OPCODE  OP1_TYPE OP1_VAL  OP2_TYPE OP2_VAL
-        
-        // Because I haven't written the assembler yet, I will define the contract here.
-        // Assembler will write integers to memory directly.
-        // This load function just reads "Address Value" pairs for simplicity?
-        // Or "Address Opcode Operands..."
-        
         std::string addrToken;
         ss >> addrToken;
         if (addrToken.empty()) continue;
         
         try {
             address = std::stoi(addrToken);
-            
-            // Read bytes into memory
             int byteVal;
             while (ss >> std::hex >> byteVal) {
                 if (address < memory.size()) {
@@ -80,33 +66,54 @@ bool Simulator::load(const std::string& objectFile) {
     return true;
 }
 
-void Simulator::run() {
+
+void Simulator::run(bool debugMode) { // Changed signature
     running = true;
     int maxCycles = 5000;
     int cycles = 0;
     
-    std::cout << "--- emu8086 Simulation Started (IP=" << std::hex << IP << ") ---" << std::endl;
+    // Initialize Stack Pointer if 0 (Safety)
+    if (SP == 0) SP = 0xFFFE;
+
+    if (!debugMode) std::cout << "--- emu8086 Simulation Started (IP=" << std::hex << IP << ") ---" << std::endl;
+    else std::cout << "DEBUG_MODE_START" << std::endl;
 
     while (running && cycles < maxCycles) {
+        if (debugMode) {
+            // Print State: DEBUG|IP|AX|BX|CX|DX|SP|ZF
+            std::cout << "DEBUG|" 
+                      << std::hex << std::setw(4) << std::setfill('0') << IP << "|"
+                      << std::setw(4) << AX.X << "|"
+                      << std::setw(4) << BX.X << "|"
+                      << std::setw(4) << CX.X << "|"
+                      << std::setw(4) << DX.X << "|"
+                      << std::setw(4) << SP << "|"
+                      << (ZF?"1":"0") << std::endl;
+            
+            // Wait for command
+            char cmd;
+            std::cin >> cmd;
+            if (cmd == 'q') { running = false; break; }
+            if (cmd == 'r') { debugMode = false; } // Continue without pausing
+            // if 's', convert to just continuing loop once
+        }
+
         // Fetch Opcode
         uint8_t opcode = memory[IP];
         IP++;
 
-        // NOTE: This is a Simplified Opcode Set, NOT real x86 machine code.
-        // 0x01 = MOV Reg, Imm
-        // 0x02 = MOV Reg, Reg
-        // 0x10 = INT
-        // 0x20 = PRINTN String Literal (Address)
-        // 0x00 = HALT
-        
         switch (opcode) {
             case 0x01: // MOV Reg8, Imm8
             {
                 uint8_t regID = memory[IP++];
                 uint8_t val = memory[IP++];
-                // Map ID to AH, AL... 0=AL, 1=AH...
-                // Hardcoding mapping for demo: 0=AL, 1=AH
-                if (regID == 1) AX.H = val; // MOV AH, Imm
+                // Simplified demo mapping
+                // Updated Mapping: 0=AL, 1=AH, 2=BL, 3=BH...
+                if (regID == 0) AX.L = val;
+                else if (regID == 1) AX.H = val;
+                else if (regID == 2) BX.L = val;
+                else if (regID == 3) BX.H = val; 
+                // ... others
                 break;
             }
             case 0x10: // INT Imm8
@@ -117,36 +124,90 @@ void Simulator::run() {
                         running = false;
                     }
                     else if (AX.H == 0x09) { // Print String at DX
-                        // Not implemented for this exact demo, using PRINTN instead
+                         // Logic omitted for brevity
                     }
                 }
                 break;
             }
-            case 0x20: // PRINTN Address (16-bit)
+            case 0x20: // PRINTN Address
             {
                 uint8_t msgL = memory[IP++];
                 uint8_t msgH = memory[IP++];
                 uint16_t msgAddr = (msgH << 8) | msgL;
                 
-                // Print string at msgAddr until \0 or '$'
                 while (memory[msgAddr] != 0 && memory[msgAddr] != '$') {
-                    if (memory[msgAddr] == '"') { msgAddr++; continue; } // wrapper
-                    std::cout << (char)memory[msgAddr];
+                    if (memory[msgAddr] == '"') { msgAddr++; continue; } 
+                    std::cout << (char)memory[msgAddr]; // This goes to stdout
                     msgAddr++;
                 }
-                std::cout << std::endl;
+                if (!debugMode) std::cout << std::endl;
+                else std::cout << "\n[CONSOLE_OUTPUT_NEWLINE]\n"; // Special marker for debug?
                 break;
             }
-            case 0x00: // HALT/NOP
-                if (memory[IP] == 0 && memory[IP+1] == 0) running = false; // Safety
+            case 0x30: // PUSH Type Val
+            {
+                uint8_t type = memory[IP++]; // 1=Reg, 2=Imm
+                uint16_t val = 0;
+                if (type == 1) { // Reg
+                     // Re-reading logic (simplified for diff)
+                     IP--; 
+                     uint8_t regIDByte = memory[IP++];
+                     uint8_t padding = memory[IP++]; 
+                     uint16_t* r = nullptr;
+                     if (regIDByte == 0) r = &AX.X;
+                     else if (regIDByte == 1) r = &BX.X;
+                     else if (regIDByte == 2) r = &CX.X;
+                     else if (regIDByte == 3) r = &DX.X;
+                     if (r) val = *r;
+                } else {
+                     uint8_t low = memory[IP++];
+                     uint8_t high = memory[IP++];
+                     val = (high << 8) | low;
+                }
+                push(val);
+                break;
+            }
+            case 0x31: // POP Reg
+            {
+                 uint8_t type = memory[IP++];
+                 uint8_t regID = memory[IP++];
+                 uint8_t padding = memory[IP++]; 
+                 uint16_t val = pop();
+                 uint16_t* r = nullptr;
+                 if (regID == 0) r = &AX.X;
+                 else if (regID == 1) r = &BX.X;
+                 else if (regID == 2) r = &CX.X;
+                 else if (regID == 3) r = &DX.X;
+                 if (r) *r = val;
+                 break;
+            }
+            case 0x32: // CALL Addr
+            {
+                 uint8_t type = memory[IP++];
+                 uint8_t low = memory[IP++];
+                 uint8_t high = memory[IP++];
+                 uint16_t addr = (high << 8) | low;
+                 push(IP); 
+                 IP = addr; 
+                 break;
+            }
+            case 0x33: // RET
+            {
+                 uint8_t pad1 = memory[IP++];
+                 uint8_t pad2 = memory[IP++];
+                 IP = pop();
+                 break;
+            }
+
+            case 0x00: // HALT 
+                if (memory[IP] == 0 && memory[IP+1] == 0) running = false;
                 break;
             
             default:
-                // Assume data or padding
                 break;
         }
         cycles++;
     }
     
-    std::cout << "--- Simulation Finished ---" << std::endl;
+    if (!debugMode) std::cout << "--- Simulation Finished ---" << std::endl;
 }
