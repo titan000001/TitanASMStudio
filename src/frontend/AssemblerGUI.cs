@@ -281,21 +281,15 @@ public class AssemblerGUI : Form
             return;
         }
 
+        // Launch in new Console Window to allow Input
         ProcessStartInfo startInfo = new ProcessStartInfo();
-        startInfo.FileName = exePath;
-        startInfo.Arguments = "-run \"" + objInternal + "\"";
-        startInfo.RedirectStandardOutput = true;
-        startInfo.RedirectStandardError = true;
-        startInfo.UseShellExecute = false;
-        startInfo.CreateNoWindow = true;
+        startInfo.FileName = "cmd.exe";
+        startInfo.Arguments = "/K \"" + exePath + " -run \"" + objInternal + "\"\"";
+        startInfo.UseShellExecute = true; // Use Shell to spawn window
+        startInfo.CreateNoWindow = false; // Show Window
 
         try {
-            using (Process process = Process.Start(startInfo)) {
-                process.WaitForExit();
-                string output = process.StandardOutput.ReadToEnd();
-                string error = process.StandardError.ReadToEnd();
-                MessageBox.Show(output + "\n" + error, "Titan Simulator");
-            }
+            Process.Start(startInfo);
         } catch (Exception ex) {
             MessageBox.Show("Titan Error: " + ex.Message);
         }

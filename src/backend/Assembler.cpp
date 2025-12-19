@@ -13,6 +13,18 @@ std::string Assembler::trim(const std::string& str) {
     return str.substr(first, (last - first + 1));
 }
 
+// Helper to normalize lines (ensure spaces around commas)
+std::string normalizeLine(std::string line) {
+    std::string res = "";
+    bool inQuotes = false;
+    for (char c : line) {
+        if (c == '"') inQuotes = !inQuotes;
+        if (c == ',' && !inQuotes) res += " , ";
+        else res += c;
+    }
+    return res;
+}
+
 std::string cleanToken(std::string t) {
     if (!t.empty() && t.back() == ',') t.pop_back();
     return t;
@@ -58,7 +70,7 @@ bool Assembler::pass1(const std::string& inputFile) {
         line = trim(line);
         if (line.empty() || line[0] == ';') continue;
         
-        std::stringstream ss(line);
+        std::stringstream ss(normalizeLine(line));
         std::string token; ss >> token;
         
         if (token.empty()) continue; // Safety check forced
@@ -113,17 +125,15 @@ bool Assembler::pass2(const std::string& inputFile, const std::string& outputFil
         line = trim(line);
         if (line.empty() || line[0] == ';') continue;
         
-
+        std::string norm = normalizeLine(line);
         // Check if Variable Decl (Skip code gen for now, handled in P1)
-        // But we DO want to initialize memory in Simulator.
-        // If "VAR DB 5", we write "800 5".
-        if (line.find(" db ") != std::string::npos || line.find(" DB ") != std::string::npos) {
-             std::stringstream ss(line);
+        if (norm.find(" db ") != std::string::npos || norm.find(" DB ") != std::string::npos) {
+             std::stringstream ss(norm);
              std::string label, type, valStr;
              ss >> label >> type >> valStr;
              if (type == "db" || type == "DB") {
                  int val = parseNumber(valStr);
-                 outFile << dataCounter << " " << std::hex << val << std::endl;
+                 outFile << dataCounter << " " << std::hex << (int)(uint8_t)val << std::endl;
                  dataCounter++;
                  continue;
              }
@@ -134,7 +144,7 @@ bool Assembler::pass2(const std::string& inputFile, const std::string& outputFil
         if (colon != std::string::npos) line = trim(line.substr(colon + 1));
         if (line.empty()) continue;
 
-        std::stringstream ss(line);
+        std::stringstream ss(normalizeLine(line));
         std::string opcode;
         ss >> opcode;
         
@@ -156,22 +166,22 @@ bool Assembler::pass2(const std::string& inputFile, const std::string& outputFil
             int src = getRegID(srcStr);
             
             if (src != -1 && dest != -1) { // Reg to Reg
-                outFile << locationCounter << " 02 " << dest << " " << src << std::endl;
+                outFile << std::dec << locationCounter << " 02 " << std::hex << (int)(uint8_t)dest << " " << (int)(uint8_t)src << std::endl;
                 locationCounter += 3;
             } else if (dest != -1) { // MOV Reg, Imm or Mem
                 if (symbolTable.count(srcStr)) {
                     int addr = symbolTable[srcStr];
-                    outFile << locationCounter << " 05 " << dest << " " << (addr&0xFF) << " " << ((addr>>8)&0xFF) << std::endl;
+                    outFile << std::dec << locationCounter << " 05 " << std::hex << (int)(uint8_t)dest << " " << (int)(uint8_t)(addr&0xFF) << " " << (int)(uint8_t)((addr>>8)&0xFF) << std::endl;
                     locationCounter += 4;
                 } else {
                     int val = parseNumber(srcStr);
-                    outFile << locationCounter << " 01 " << dest << " " << std::hex << (val & 0xFF) << " " << ((val >> 8) & 0xFF) << std::endl;
+                    outFile << std::dec << locationCounter << " 01 " << std::hex << (int)(uint8_t)dest << " " << (int)(uint8_t)(val & 0xFF) << " " << (int)(uint8_t)((val >> 8) & 0xFF) << std::endl;
                     locationCounter += 4;
                 }
             } else if (src != -1) { // MOV [Mem], Reg
                  if (symbolTable.count(destStr)) {
                      int addr = symbolTable[destStr];
-                     outFile << locationCounter << " 06 " << (addr&0xFF) << " " << ((addr>>8)&0xFF) << " " << src << std::endl;
+                     outFile << std::dec << locationCounter << " 06 " << std::hex << (int)(uint8_t)(addr&0xFF) << " " << (int)(uint8_t)((addr>>8)&0xFF) << " " << (int)(uint8_t)src << std::endl;
                      locationCounter += 4; // Op(1)+Addr(2)+Reg(1)
                  }
             }
@@ -186,17 +196,17 @@ bool Assembler::pass2(const std::string& inputFile, const std::string& outputFil
             int srcID = getRegID(srcStr);
             
             if (srcID != -1) { // Reg
-                 outFile << locationCounter << " 0" << op << " " << dest << " 1 " << srcID << " 00" << std::endl;
+                 outFile << std::dec << locationCounter << " 0" << op << " " << std::hex << (int)(uint8_t)dest << " 01 " << (int)(uint8_t)srcID << " 00" << std::endl;
             } else { // Imm
                  int val = parseNumber(srcStr);
-                 outFile << locationCounter << " 0" << op << " " << dest << " 2 " << (val&0xFF) << " " << ((val>>8)&0xFF) << std::endl;
+                 outFile << std::dec << locationCounter << " 0" << op << " " << std::hex << (int)(uint8_t)dest << " 02 " << (int)(uint8_t)(val&0xFF) << " " << (int)(uint8_t)((val>>8)&0xFF) << std::endl;
             }
             locationCounter += 6; 
         }
         else if (opcode == "int") {
             std::string arg; ss >> arg; arg = cleanToken(arg);
             int val = parseNumber(arg);
-            outFile << locationCounter << " 10 " << std::hex << val << std::endl;
+            outFile << std::dec << locationCounter << " 10 " << std::hex << (int)(uint8_t)val << std::endl;
             locationCounter += 2;
         }
         else if (opcode == "push") {
@@ -204,24 +214,24 @@ bool Assembler::pass2(const std::string& inputFile, const std::string& outputFil
             int type = 2; int val = 0;
             if (getRegID(arg) != -1) { type = 1; val = getRegID(arg); }
             else val = parseNumber(arg);
-            outFile << locationCounter << " 30 " << type << " " << std::hex << val << std::endl;
+            outFile << std::dec << locationCounter << " 30 " << type << " " << std::hex << (int)(uint8_t)val << std::endl;
             locationCounter += 4;
         }
         else if (opcode == "pop") {
             std::string arg; ss >> arg; arg = cleanToken(arg);
             int val = getRegID(arg);
-            outFile << locationCounter << " 31 1 " << std::hex << val << std::endl;
+            outFile << std::dec << locationCounter << " 31 01 " << std::hex << (int)(uint8_t)val << std::endl;
             locationCounter += 4;
         }
         else if (opcode == "call") {
              std::string lbl; ss >> lbl; lbl = cleanToken(lbl);
              int addr = 0;
              if (symbolTable.count(lbl)) addr = symbolTable[lbl];
-             outFile << locationCounter << " 32 2 " << std::hex << addr << std::endl; 
+             outFile << std::dec << locationCounter << " 32 02 " << std::hex << (int)(uint8_t)(addr&0xFF) << " " << (int)(uint8_t)((addr>>8)&0xFF) << std::endl; 
              locationCounter += 4;
         }
         else if (opcode == "ret") {
-             outFile << locationCounter << " 33 0 0" << std::endl;
+             outFile << std::dec << locationCounter << " 33 00 00" << std::endl;
              locationCounter += 4;
         }
         else if (opcode == "printn") {

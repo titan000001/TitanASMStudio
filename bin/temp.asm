@@ -1,41 +1,32 @@
 org 100h
 
-.model small 
-.stack 100h
-
 .code
-
 main proc
+
+    ; input 1
     mov ah,1
     int 21h
-    mov bl, al
-    
+    sub al,48
+    mov bl,al
+
+    ; input 2
     mov ah,1
     int 21h
-    mov bh, al
-    
-    mov ah,1
-    int 21h
-    mov cl, al
-    
+    sub al,48
+    mov bh,al
+
+    ; add
     add bl,bh
-    sub bl, 48 
-    
-    add bl,cl
-    sub bl, 48
-    
+
+    ; output result
+    add bl,48
+    mov dl,bl
     mov ah,2
-    mov dl,10
     int 21h
-    mov dl, 13
+
+    ; exit
+    mov ah,4Ch
     int 21h
-    
-    mov ah,2
-    mov dl, bl 
-    int 21h
-    
-    exit:
-    mov ah, 4ch
-    int 21h
-    main endp
+
+main endp
 end main
