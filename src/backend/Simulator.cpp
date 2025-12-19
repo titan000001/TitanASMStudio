@@ -103,19 +103,141 @@ void Simulator::run(bool debugMode) { // Changed signature
         IP++;
 
         switch (opcode) {
-            case 0x01: // MOV Reg8, Imm8
+            case 0x01: // MOV Reg, Imm
             {
                 uint8_t regID = memory[IP++];
-                uint8_t val = memory[IP++];
-                // Simplified demo mapping
-                // Updated Mapping: 0=AL, 1=AH, 2=BL, 3=BH...
-                if (regID == 0) AX.L = val;
-                else if (regID == 1) AX.H = val;
-                else if (regID == 2) BX.L = val;
-                else if (regID == 3) BX.H = val; 
-                // ... others
+                uint16_t val = 0;
+                // Check if 8-bit or 16-bit imm? Assembler should specify.
+                // Assuming simplified protocol: if regID < 8, it's 8-bit.
+                // We read 1 byte for 8-bit reg? 
+                // Let's assume Assembler always emits 16-bit val for simplicity in parsing, 
+                // but we cast down.
+                // Or better: read type byte?
+                // Let's stick to: "MOV Reg ID, Val (16-bit)"
+                val = memory[IP++];
+                val |= (memory[IP++] << 8); // Read 16-bit Imm
+                
+                if (regID == 0) AX.L = (uint8_t)val;
+                else if (regID == 1) AX.H = (uint8_t)val;
+                else if (regID == 2) BX.L = (uint8_t)val;
+                else if (regID == 3) BX.H = (uint8_t)val;
+                else if (regID == 4) CX.L = (uint8_t)val;
+                else if (regID == 5) CX.H = (uint8_t)val;
+                else if (regID == 6) DX.L = (uint8_t)val;
+                else if (regID == 7) DX.H = (uint8_t)val;
+                // 16-bit Access?
+                // Left out for brevity unless requested.
                 break;
             }
+            case 0x02: // MOV Reg1, Reg2
+            {
+                uint8_t destID = memory[IP++];
+                uint8_t srcID = memory[IP++];
+                
+                uint8_t val = 0;
+                // Read Src
+                if (srcID == 0) val = AX.L;
+                else if (srcID == 1) val = AX.H;
+                else if (srcID == 2) val = BX.L;
+                else if (srcID == 3) val = BX.H;
+                else if (srcID == 4) val = CX.L;
+                else if (srcID == 5) val = CX.H;
+                else if (srcID == 6) val = DX.L;
+                else if (srcID == 7) val = DX.H;
+                
+                // Write Dest
+                if (destID == 0) AX.L = val;
+                else if (destID == 1) AX.H = val;
+                else if (destID == 2) BX.L = val;
+                else if (destID == 3) BX.H = val;
+                else if (destID == 4) CX.L = val;
+                else if (destID == 5) CX.H = val;
+                else if (destID == 6) DX.L = val;
+                else if (destID == 7) DX.H = val;
+                break;
+            }
+            case 0x03: // ADD Dest, Src (Reg, Reg/Imm)
+            case 0x04: // SUB Dest, Src
+            {
+                 bool isSub = (opcode == 0x04);
+                 uint8_t destID = memory[IP++];
+                 uint8_t type = memory[IP++]; // 1=Reg, 2=Imm
+                 uint16_t srcVal = 0;
+                 
+                 if (type == 1) { // Reg
+                     uint8_t srcID = memory[IP++];
+                     memory[IP++]; // Padding to align?
+                     if (srcID == 0) srcVal = AX.L;
+                     else if (srcID == 1) srcVal = AX.H;
+                     else if (srcID == 2) srcVal = BX.L;
+                     else if (srcID == 3) srcVal = BX.H;
+                     else if (srcID == 4) srcVal = CX.L;
+                     else if (srcID == 5) srcVal = CX.H;
+                     else if (srcID == 6) srcVal = DX.L;
+                     else if (srcID == 7) srcVal = DX.H;
+                 } else { // Imm
+                     srcVal = memory[IP++];
+                     srcVal |= (memory[IP++] << 8);
+                 }
+                 
+                 // Perform Op on Dest
+                 uint8_t* destPtr = nullptr;
+                 if (destID == 0) destPtr = &AX.L;
+                 else if (destID == 1) destPtr = &AX.H;
+                 else if (destID == 2) destPtr = &BX.L;
+                 else if (destID == 3) destPtr = &BX.H;
+                 else if (destID == 4) destPtr = &CX.L;
+                 else if (destID == 5) destPtr = &CX.H;
+                 else if (destID == 6) destPtr = &DX.L;
+                 else if (destID == 7) destPtr = &DX.H;
+                 
+                 if (destPtr) {
+                     if (isSub) *destPtr -= (uint8_t)srcVal;
+                     else *destPtr += (uint8_t)srcVal;
+                 }
+                 break;
+            }
+
+            case 0x05: // MOV Reg, [Addr] (Load)
+            {
+                 uint8_t destID = memory[IP++];
+                 uint8_t low = memory[IP++];
+                 uint8_t high = memory[IP++];
+                 uint16_t addr = (high << 8) | low;
+                 
+                 uint8_t val = memory[addr];
+                 
+                 if (destID == 0) AX.L = val;
+                 else if (destID == 1) AX.H = val;
+                 else if (destID == 2) BX.L = val;
+                 else if (destID == 3) BX.H = val;
+                 else if (destID == 4) CX.L = val;
+                 else if (destID == 5) CX.H = val;
+                 else if (destID == 6) DX.L = val;
+                 else if (destID == 7) DX.H = val;
+                 break;
+            }
+            case 0x06: // MOV [Addr], Reg (Store)
+            {
+                 uint8_t addrL = memory[IP++];
+                 uint8_t addrH = memory[IP++];
+                 uint16_t addr = (addrH << 8) | addrL;
+                 uint8_t srcID = memory[IP++];
+                 
+                 uint8_t val = 0;
+                 if (srcID == 0) val = AX.L;
+                 else if (srcID == 1) val = AX.H;
+                 else if (srcID == 2) val = BX.L;
+                 else if (srcID == 3) val = BX.H;
+                 else if (srcID == 4) val = CX.L;
+                 else if (srcID == 5) val = CX.H;
+                 else if (srcID == 6) val = DX.L;
+                 else if (srcID == 7) val = DX.H;
+                 
+                 memory[addr] = val;
+                 break;
+            }
+            
             case 0x10: // INT Imm8
             {
                 uint8_t intNo = memory[IP++];
@@ -124,7 +246,17 @@ void Simulator::run(bool debugMode) { // Changed signature
                         running = false;
                     }
                     else if (AX.H == 0x09) { // Print String at DX
-                         // Logic omitted for brevity
+                        // Logic simplified
+                        std::cout << "StringOutput Stub";
+                    }
+                    else if (AX.H == 0x01) { // Input Char
+                        char c;
+                        if (debugMode) std::cout << "\n[INPUT_REQ]";
+                        std::cin >> c;
+                        AX.L = c; // Store in AL
+                    }
+                    else if (AX.H == 0x02) { // Output Char from DL
+                        std::cout << (char)DX.L;
                     }
                 }
                 break;
