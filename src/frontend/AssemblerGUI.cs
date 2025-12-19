@@ -49,7 +49,8 @@ public class AssemblerGUI : Form
         Label outputLabel = new Label() { Text = "Machine Code Output:", Dock = DockStyle.Top, Height = 20, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
         outputTextBox = new TextBox();
         outputTextBox.Multiline = true;
-        outputTextBox.ScrollBars = ScrollBars.Vertical;
+        outputTextBox.WordWrap = false;
+        outputTextBox.ScrollBars = ScrollBars.Both;
         outputTextBox.Dock = DockStyle.Fill;
         outputTextBox.ReadOnly = true;
         outputTextBox.Font = new Font("Consolas", 11);
