@@ -45,10 +45,10 @@ TitanASM is a high-performance development environment designed for **Compiler D
 
 TitanASM supports a comprehensive subset of the 8086 instruction set:
 
-*   **Move & Math**: `MOV`, `ADD`, `SUB`, `CMP`
+*   **Move & Math**: `MOV`, `ADD`, `SUB`, `CMP`, `MUL`, `DIV`, `LEA`
 *   **Flow Control**: `JMP`, `JZ`, `JNZ`, `CALL`, `RET`
 *   **Stack Logic**: `PUSH`, `POP`
-*   **Interrupts**: `INT 21h` (AH=1: Input, AH=2: Output, AH=4Ch: Exit)
+*   **Interrupts**: `INT 21h` (AH=1: Input, AH=2: Output, AH=9: String, AH=4Ch: Exit)
 *   **Directives**: `.data`, `.code`, `.model`, `org`, `db`, `include`
 
 ---
