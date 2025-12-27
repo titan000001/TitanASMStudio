@@ -98,6 +98,8 @@ bool Assembler::pass1(const std::string& inputFile) {
         else if (token == "print" || token == "printn") {
             locationCounter += 3; 
         }
+        else if (token == "mul" || token == "div") locationCounter += 3;
+        else if (token == "lea") locationCounter += 4;
         else {
             std::string next; ss >> next;
             if (next == "db" || next == "DB") {
@@ -134,6 +136,24 @@ bool Assembler::pass2(const std::string& inputFile, const std::string& outputFil
                  int val = parseNumber(valStr);
                  outFile << std::hex << std::setw(4) << std::setfill('0') << dataCounter 
                          << " " << std::setw(2) << (int)(uint8_t)val << std::endl;
+                 dataCounter++;
+                 continue;
+             }
+        }
+        
+        // DB ? Handling
+        std::string dbCheck = norm;
+        size_t dbPos = dbCheck.find(" db ");
+        if (dbPos == std::string::npos) dbPos = dbCheck.find(" DB ");
+        if (dbPos != std::string::npos) {
+             std::stringstream ss(dbCheck);
+             std::string label, type, valStr;
+             ss >> label >> type >> valStr;
+             if ((type == "db" || type == "DB") && valStr == "?") {
+                 symbolTable[label] = dataCounter;
+                 // Initialize to 0 for safety
+                 outFile << std::hex << std::setw(4) << std::setfill('0') << dataCounter 
+                         << " " << std::setw(2) << 0 << std::endl;
                  dataCounter++;
                  continue;
              }
@@ -189,6 +209,28 @@ bool Assembler::pass2(const std::string& inputFile, const std::string& outputFil
                  outFile << std::hex << std::setw(4) << std::setfill('0') << locationCounter << " 0" << op << " " << std::setw(2) << (int)(uint8_t)dest << " 02 " << std::setw(2) << (int)(uint8_t)(val&0xFF) << std::endl;
             }
             locationCounter += 4; 
+        }
+        else if (opcode == "mul" || opcode == "div") {
+            std::string srcStr; ss >> srcStr;
+            int srcID = getRegID(srcStr);
+            int op = (opcode == "mul") ? 0x50 : 0x51;
+            // Format: ADDR OP REG 00 (REG is src)
+            if (srcID != -1) {
+                outFile << std::hex << std::setw(4) << std::setfill('0') << locationCounter << " " << op << " " << std::setw(2) << (int)(uint8_t)srcID << " 00" << std::endl;
+                locationCounter += 3;
+            }
+        }
+        else if (opcode == "lea") {
+            std::string destStr, srcStr; ss >> destStr >> srcStr; // source is variable name
+            int destID = getRegID(destStr);
+            if (destID != -1 && symbolTable.count(srcStr)) {
+                int addr = symbolTable[srcStr];
+                outFile << std::hex << std::setw(4) << std::setfill('0') << locationCounter << " 15 " 
+                        << std::setw(2) << (int)(uint8_t)destID << " " 
+                        << std::setw(2) << (int)(uint8_t)(addr&0xFF) << " " 
+                        << std::setw(2) << (int)(uint8_t)((addr>>8)&0xFF) << std::endl;
+                locationCounter += 4;
+            }
         }
         else if (opcode == "jmp" || opcode == "jz" || opcode == "jnz") {
             int op = (opcode == "jmp") ? 0x40 : (opcode == "jz") ? 0x41 : 0x42;

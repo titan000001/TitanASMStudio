@@ -187,6 +187,13 @@ void Simulator::run(bool debugMode) {
                         AX.L = c;
                     }
                     else if (AX.H == 0x02) std::cout << (char)DX.L;
+                    else if (AX.H == 0x09) { // String Print
+                         uint16_t addr = (DX.X); // Using DS:DX (DS implied same segment)
+                         // Since our memory model is flat for now (small model), DX is offset
+                         while (addr < memory.size() && memory[addr] != '$') {
+                             std::cout << (char)memory[addr++];
+                         }
+                    }
                 }
                 break;
             }
@@ -246,6 +253,53 @@ void Simulator::run(bool debugMode) {
                 if (opcode == 0x40) IP = addr;
                 else if (opcode == 0x41 && ZF) IP = addr;
                 else if (opcode == 0x42 && !ZF) IP = addr;
+                break;
+            }
+            case 0x50: // MUL r8
+            {
+                uint8_t srcID = memory[IP++];
+                IP++; // Skip 00
+                uint8_t srcVal = 0;
+                if (srcID == 0) srcVal = AX.L; else if (srcID == 1) srcVal = AX.H;
+                else if (srcID == 2) srcVal = BX.L; else if (srcID == 3) srcVal = BX.H;
+                else if (srcID == 4) srcVal = CX.L; else if (srcID == 5) srcVal = CX.H;
+                else if (srcID == 6) srcVal = DX.L; else if (srcID == 7) srcVal = DX.H;
+                
+                uint16_t res = (uint16_t)AX.L * (uint16_t)srcVal;
+                AX.X = res;
+                // Flags not fully implemented but ZF usually updated
+                ZF = (AX.X == 0);
+                break;
+            }
+            case 0x51: // DIV r8
+            {
+                uint8_t srcID = memory[IP++];
+                IP++; // Skip 00
+                uint8_t srcVal = 0;
+                if (srcID == 0) srcVal = AX.L; else if (srcID == 1) srcVal = AX.H;
+                else if (srcID == 2) srcVal = BX.L; else if (srcID == 3) srcVal = BX.H;
+                else if (srcID == 4) srcVal = CX.L; else if (srcID == 5) srcVal = CX.H;
+                else if (srcID == 6) srcVal = DX.L; else if (srcID == 7) srcVal = DX.H;
+                
+                if (srcVal == 0) {
+                     std::cout << "Divide Error" << std::endl;
+                     running = false;
+                } else {
+                     AX.L = AX.X / srcVal; // Quotient
+                     AX.H = AX.X % srcVal; // Remainder
+                }
+                break;
+            }
+            case 0x15: // LEA
+            {
+                uint8_t destID = memory[IP++];
+                uint16_t addr = memory[IP++];
+                addr |= (memory[IP++] << 8);
+                
+                if (destID == 0) AX.X = addr; // Usually LEA loads to 16-bit reg, we map 0->AX
+                else if (destID == 2) BX.X = addr;
+                else if (destID == 4) CX.X = addr;
+                else if (destID == 6) DX.X = addr;
                 break;
             }
             default: running = false; break;
