@@ -2,7 +2,11 @@
 #include "MacroProcessor.h"
 #include <iomanip>
 #include <cstdint>
+#include <cstdint>
 #include <vector>
+#include <string>
+#include <sstream>
+#include <iostream>
 
 Assembler::Assembler() {
     locationCounter = 0x100;
@@ -133,10 +137,25 @@ bool Assembler::pass2(const std::string& inputFile, const std::string& outputFil
              ss >> label >> type >> valStr;
              if (type == "db" || type == "DB") {
                  symbolTable[label] = dataCounter;
-                 int val = parseNumber(valStr);
-                 outFile << std::hex << std::setw(4) << std::setfill('0') << dataCounter 
-                         << " " << std::setw(2) << (int)(uint8_t)val << std::endl;
-                 dataCounter++;
+                 if (!valStr.empty() && valStr[0] == '"') {
+                     // String literal
+                     size_t start = norm.find('"');
+                     size_t end = norm.find_last_of('"');
+                     if (start != std::string::npos && end != std::string::npos && end > start) {
+                         std::string content = norm.substr(start + 1, end - start - 1);
+                         for (char c : content) {
+                             outFile << std::hex << std::setw(4) << std::setfill('0') << dataCounter 
+                                     << " " << std::setw(2) << (int)(uint8_t)c << std::endl;
+                             dataCounter++;
+                         }
+                     }
+                 } else {
+                     // Number
+                     int val = parseNumber(valStr);
+                     outFile << std::hex << std::setw(4) << std::setfill('0') << dataCounter 
+                             << " " << std::setw(2) << (int)(uint8_t)val << std::endl;
+                     dataCounter++;
+                 }
                  continue;
              }
         }
