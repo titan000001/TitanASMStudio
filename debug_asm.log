@@ -1,7 +1,0 @@
-Assembler started for file: tests\new_features.asm
-DEBUG DB: msg1 "Test
-DEBUG DB: val1 3
-DEBUG DB: val2 2
-DEBUG DB: res ?
-Assembly completed successfully!
-Output written to: output.obj

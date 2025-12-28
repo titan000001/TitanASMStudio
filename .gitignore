@@ -1,0 +1,6 @@
+*.o
+*.obj
+*.log
+*.exe
+temp_expanded.asm
+bin/
